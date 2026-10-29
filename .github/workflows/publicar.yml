@@ -1,0 +1,35 @@
+# Al publicar una Release (p. ej. v1.0.0) desde la web de GitHub, construye la aplicación,
+# la prueba y adjunta el HTML a esa Release (como gobase.html) junto con su huella SHA-256.
+name: Adjuntar el HTML a la versión
+on:
+  release:
+    types: [published]
+permissions:
+  contents: write
+jobs:
+  html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Comprobar que la etiqueta coincide con VERSION
+        run: test "v$(cat VERSION)" = "${{ github.event.release.tag_name }}"
+      - name: Construir
+        run: python3 build.py
+      - name: Probar
+        run: |
+          node tests/test_reglas.js
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+          node tests/test_app.js
+      - name: Adjuntar a la Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp index.html gobase.html
+          sha256sum gobase.html > SHA256SUMS.txt
+          gh release upload "${{ github.event.release.tag_name }}" gobase.html SHA256SUMS.txt --clobber

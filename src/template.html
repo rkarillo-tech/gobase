@@ -1,0 +1,1007 @@
+<!doctype html>
+<!--
+  GoBase {{VERSION}} · https://github.com/rkarillo-tech/gobase
+
+  MIT License
+
+  Copyright (c) 2026 Rafael Karino Arillo (rkarillo-tech)
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+  Todo el código (reglas, motor de Monte Carlo, lectores de problemas, SGF e interfaz) es propio:
+  no usa bibliotecas externas ni descarga nada.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Suite de go en un único archivo: tablero, variantes, SGF, motor, análisis, recuento, problemas y entrenador.">
+<title>GoBase</title>
+<meta name="theme-color" content="#0b0e14">
+<link rel="icon" type="image/svg+xml" href="{{ICON_SVG}}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ICON_PNG32}}">
+<style>
+:root {
+  --bg: #0b0e14; --panel: #141a24; --panel2: #1c2433; --panel3: #263147;
+  --text: #eef2f8; --muted: #94a3b8; --accent: #66bb6a; --accent-dim: #214328;
+  --warn: #ffa726; --danger: #ef5350; --info: #29b6f6; --brilliant: #26c6da; --mistake: #ff7043;
+  --border: #2c384e;
+  --wood: #dcb35c; --wood2: #d3a74c; --line: #2b1d0e;
+}
+[data-theme="kaya"] { --wood: #e9c98b; --wood2: #e1bc75; --line: #3a2a14; }
+[data-theme="walnut"] { --wood: #b98543; --wood2: #a97535; --line: #1d1206; }
+[data-theme="green"] { --wood: #a9c48f; --wood2: #9cb781; --line: #1f2d18; }
+[data-theme="slate"] { --wood: #9aa7b4; --wood2: #8c99a6; --line: #101820; }
+[data-theme="paper"] { --wood: #f4f1e8; --wood2: #f4f1e8; --line: #222; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { color-scheme: dark; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.42 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+a { color: var(--info); }
+code { background: var(--panel2); padding: 0 4px; border-radius: 4px; }
+
+header {
+  padding: 9px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 30;
+}
+.brand-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+h1 { font-size: 1.12rem; margin: 0; white-space: nowrap; }
+.eco-banner {
+  background: var(--panel2); border: 1px solid var(--border); padding: 3px 9px; border-radius: 6px;
+  font-size: 0.8rem; color: var(--info); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw;
+}
+.header-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.header-actions select { width: auto; }
+
+main {
+  max-width: 1640px; margin: auto; padding: 12px;
+  display: grid; grid-template-columns: minmax(320px, 700px) minmax(380px, 1fr); gap: 14px; align-items: start;
+}
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 11px; padding: 12px; min-width: 0; }
+
+/* Barras de jugador */
+.player-bar {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  background: var(--panel2); padding: 5px 11px; border-radius: 7px; margin-bottom: 6px; font-size: 0.88rem; border: 1px solid var(--border); min-height: 32px;
+}
+.player-bar.bottom { margin-top: 6px; margin-bottom: 0; }
+.player-bar.to-move { border-color: var(--accent); }
+.player-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.player-rank { color: var(--muted); font-weight: 400; }
+.chip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.chip.b { background: radial-gradient(circle at 35% 30%, #666, #000 70%); border: 1px solid #000; }
+.chip.w { background: radial-gradient(circle at 35% 30%, #fff, #c9c9c9 75%); border: 1px solid #777; }
+.bar-right { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.mat-badge { background: var(--panel3); color: var(--accent); font-weight: 700; padding: 1px 6px; border-radius: 4px; font-size: 0.76rem; }
+.clock { font-family: ui-monospace, monospace; font-weight: 700; font-size: .95rem; background: var(--panel3); padding: 1px 8px; border-radius: 5px; min-width: 4.4em; text-align: center; border: 1px solid var(--border); color: var(--text); }
+.clock.running { background: #e8f5e9; color: #111; border-color: var(--accent); }
+.clock.low { background: #c62828; color: #fff; border-color: #ef5350; }
+
+/* Barra de victoria + tablero */
+.board-stage { display: grid; grid-template-columns: 24px 1fr; gap: 7px; align-items: stretch; }
+.eval-bar-outer { background: #111; border: 2px solid var(--border); border-radius: 4px; position: relative; overflow: hidden; }
+.eval-bar-white { background: #f2f4f8; width: 100%; height: 50%; transition: height 0.3s ease; position: absolute; top: 0; left: 0; }
+.eval-bar-outer.hidden-eval .eval-bar-white { height: 50% !important; opacity: .25; }
+.eval-score-text { position: absolute; left: 0; right: 0; z-index: 3; font-size: 9.5px; font-weight: 800; text-align: center; padding: 3px 0; }
+.eval-score-text.top { top: 0; color: #1e293b; }
+.eval-score-text.bot { bottom: 0; color: #e2e8f0; }
+
+.board-wrap { position: relative; touch-action: none; }
+.goban { display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: 4px; user-select: none; -webkit-user-select: none; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.45); }
+.goban.locked { cursor: default; }
+body.editing .goban { outline: 3px solid var(--warn); }
+body.scoring .goban { outline: 3px solid var(--info); }
+.goban .lbl { font: 700 13px system-ui, sans-serif; fill: var(--line); opacity: .75; }
+.goban .num { font: 700 15px system-ui, sans-serif; pointer-events: none; }
+.goban .mk { pointer-events: none; }
+
+/* Modales */
+.modal-back { position: fixed; inset: 0; background: rgba(5, 8, 12, .7); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+.modal-back.open { display: flex; }
+.modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; width: min(560px, 100%); max-height: 90vh; overflow: auto; }
+.modal h2 { font-size: 1.05rem; margin-bottom: 10px; }
+.modal.wide { width: min(880px, 100%); }
+.help-tools { display: flex; gap: 6px; margin-bottom: 8px; position: sticky; top: -16px; background: var(--panel); padding: 4px 0; z-index: 2; }
+.help-tools input { flex: 1; }
+.help-body details { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; background: #121823; scroll-margin-top: 64px; }
+.help-body summary { padding: 9px 12px; font-weight: 700; color: var(--text); font-size: .9rem; margin: 0; }
+.help-body details[open] summary { border-bottom: 1px solid var(--border); }
+.help-body details > :not(summary) { margin-left: 12px; margin-right: 12px; }
+.help-body ul, .help-body ol { padding-left: 20px; font-size: .86rem; line-height: 1.55; }
+.help-body li { margin: 3px 0; }
+.help-body p { font-size: .86rem; }
+.help-body .example { background: #13261a; border-left: 3px solid var(--accent); padding: 7px 10px; border-radius: 6px; font-size: .84rem; margin: 8px 12px 10px; }
+.help-body .steps { background: #13202e; border-left: 3px solid var(--info); padding: 8px 10px; border-radius: 6px; font-size: .84rem; margin: 8px 12px 10px; }
+.help-body .warn-note { background: #2b2210; border-left: 3px solid var(--warn); padding: 7px 10px; border-radius: 6px; font-size: .84rem; }
+.faq dt { font-weight: 700; font-size: .86rem; margin-top: 8px; }
+.faq dd { margin: 2px 0 6px 12px; font-size: .84rem; color: #c8d1de; }
+.kbd-table td { padding: 3px 8px; border-bottom: 1px solid var(--border); }
+kbd { background: var(--panel3); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: .8rem; }
+
+/* Motor */
+.engine-box { margin-top: 8px; background: #101520; border: 1px solid var(--border); border-radius: 7px; font-size: 0.83rem; }
+.engine-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 9px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.engine-head .left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.engine-badge { color: var(--accent); font-weight: 700; white-space: nowrap; }
+.engine-meta { color: var(--muted); font-size: .76rem; white-space: nowrap; }
+.engine-lines { padding: 3px 0; min-height: 26px; }
+.pv-line { display: flex; gap: 8px; align-items: baseline; padding: 3px 9px; cursor: pointer; white-space: nowrap; overflow: hidden; }
+.pv-line:hover { background: rgba(255,255,255,.04); }
+.pv-score { font-weight: 800; min-width: 58px; text-align: right; font-family: ui-monospace, monospace; }
+.pv-visits { color: var(--muted); font-size: .74rem; min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+.pv-moves { color: var(--info); overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, monospace; }
+.pv-empty { color: var(--muted); padding: 4px 9px; }
+.switch { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: .78rem; cursor: pointer; white-space: nowrap; }
+.switch input { width: auto; margin: 0; }
+
+/* Gráfico */
+.eval-chart-wrap { margin-top: 8px; background: #101520; border: 1px solid var(--border); border-radius: 7px; height: 64px; position: relative; cursor: pointer; overflow: hidden; }
+.eval-chart-wrap svg { width: 100%; height: 100%; display: block; }
+.chart-msg { position: absolute; inset: 0; display: flex; gap: 10px; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: .78rem; padding: 0 10px; cursor: default; flex-wrap: wrap; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .72rem; color: var(--muted); margin-top: 3px; }
+.chart-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+
+/* Botones */
+.controls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; align-items: center; }
+button, .button {
+  background: var(--panel2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; cursor: pointer;
+  font: inherit; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 5px; transition: background 0.12s, border-color .12s;
+}
+button:hover:not(:disabled) { background: var(--panel3); border-color: #4b5d7c; }
+button:disabled { opacity: .35; cursor: not-allowed; }
+.primary { background: #26593a; border-color: #43875d; }
+.info-btn { background: #18435e; border-color: #29b6f6; color: #e1f5fe; }
+.warn-btn { background: #593d16; border-color: var(--warn); color: #ffe0b2; }
+.danger { border-color: #7c3b3b; color: #ffcdd2; }
+.sm-btn { padding: 3px 7px; font-size: 0.77rem; }
+.on { background: #26593a; border-color: #43875d; }
+.retry-box { margin-top: 8px; background: #13261a; border: 1px solid var(--accent); border-radius: 8px; padding: 9px 11px; font-size: .86rem; }
+.retry-box:focus { outline: none; }
+.retry-head { font-weight: 800; margin-bottom: 3px; }
+.retry-q { margin-top: 5px; font-weight: 600; color: #c8e6c9; }
+.retry-msg { margin-top: 6px; }
+.type-move { margin-top: 6px; }
+.type-move input { font-family: ui-monospace, monospace; font-size: .82rem; padding: 5px 8px; }
+.status-line { margin-top: 6px; font-size: .84rem; font-weight: 600; min-height: 1.2em; }
+.status-line.check { color: var(--warn); }
+.status-line.over { color: var(--danger); }
+
+/* Lista de jugadas (árbol) */
+.moves-box { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); background: #0f141e; border-radius: 7px; padding: 7px 8px; margin-top: 6px; line-height: 1.85; font-size: .88rem; }
+.mv { padding: 1px 4px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+.mv:hover { background: var(--panel3); }
+.mv.active { background: var(--accent-dim); outline: 1px solid var(--accent); color: #fff; font-weight: 700; }
+.mv .chip { width: 10px; height: 10px; vertical-align: -1px; margin-right: 2px; }
+.mvnum { color: var(--muted); margin-left: 3px; font-size: .78rem; }
+.mvcomment { color: #b6c2d3; font-style: italic; font-size: .82rem; margin: 0 3px; }
+.mvengine { color: #9fb9d6; font-size: .78rem; margin: 0 3px; }
+.var { display: block; margin: 2px 0 2px 10px; padding-left: 8px; border-left: 2px solid var(--panel3); color: #c3cad6; font-size: .85rem; line-height: 1.7; }
+.var .var { margin-left: 6px; }
+.empty-moves { color: var(--muted); font-size: .84rem; }
+.nag { font-weight: 800; margin-left: 1px; }
+.nag-good { color: var(--accent); }
+.nag-brilliant { color: var(--brilliant); }
+.nag-inacc { color: var(--warn); }
+.nag-mistake { color: var(--mistake); }
+.nag-blunder { color: var(--danger); }
+.nag-pos { color: var(--info); margin-left: 3px; font-weight: 700; }
+.mv-mark { font-size: .72rem; margin-left: 1px; }
+
+/* Pestañas */
+.mode-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; background: #0e131c; padding: 4px; border-radius: 9px; border: 1px solid var(--border); margin-bottom: 12px; }
+.tab-btn { padding: 7px 5px; border: 1px solid transparent; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.79rem; border-radius: 6px; justify-content: center; }
+.tab-btn.active { background: var(--panel2); color: var(--text); border-color: var(--border); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* Tablas */
+.cb-table-wrap { max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 7px; background: #0f141e; margin-top: 8px; }
+table.cb-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.cb-table th, .cb-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #1e2738; }
+.cb-table th { background: var(--panel2); color: var(--muted); position: sticky; top: 0; z-index: 2; }
+.cb-table tbody tr:hover { background: rgba(255,255,255,0.04); cursor: pointer; }
+.cb-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.wdl-bar { display: flex; height: 14px; border-radius: 3px; overflow: hidden; min-width: 100px; border: 1px solid #333; font-size: 9px; font-weight: 700; line-height: 13px; }
+.wdl-b { background: #1e293b; color: #cbd5e1; text-align: center; }
+.wdl-w { background: #e2e8f0; color: #111; text-align: center; }
+
+/* Informe */
+.progress { height: 6px; background: var(--panel2); border-radius: 4px; overflow: hidden; margin: 8px 0 4px; display: none; }
+.progress.show { display: block; }
+.progress > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+.report { display: none; margin: 8px 0; }
+.report.show { display: block; }
+.report table { width: 100%; border-collapse: collapse; font-size: .82rem; text-align: center; }
+.report th, .report td { padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.report th:first-child, .report td:first-child { text-align: left; color: var(--muted); }
+.report .acc { font-size: 1.05rem; font-weight: 800; }
+.report-extra h3 { color: var(--text); font-size: .88rem; margin: 12px 0 4px; }
+.rep-summary { font-size: .86rem; line-height: 1.55; margin: 0; }
+.rep-key { padding-left: 20px; font-size: .84rem; margin: 4px 0; }
+.rep-key li { margin: 3px 0; }
+.rep-phases { width: 100%; border-collapse: collapse; font-size: .82rem; text-align: center; }
+.rep-phases th, .rep-phases td { padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.rep-phases td:first-child { text-align: left; color: var(--muted); }
+.rep-player { font-size: .84rem; margin: 6px 0; }
+.rep-player ul { margin: 3px 0 0; padding-left: 20px; }
+
+/* Formularios */
+h2 { font-size: 0.94rem; margin: 0 0 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+h3 { font-size: .86rem; margin: 10px 0 4px; color: var(--muted); }
+label { display: block; color: var(--muted); font-size: .79rem; margin: 7px 0 3px; }
+input, textarea, select { width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: #0e131d; color: var(--text); font: inherit; font-size: 0.86rem; }
+input[type=checkbox], input[type=radio] { width: auto; }
+textarea { resize: vertical; min-height: 60px; }
+#moveInput { font-family: ui-monospace, monospace; font-size: .8rem; min-height: 80px; }
+.mono { font-family: ui-monospace, monospace; }
+.section { border-top: 1px solid var(--border); margin-top: 11px; padding-top: 10px; }
+.small { font-size: .78rem; color: var(--muted); margin: 3px 0 0; }
+.msg-ok { color: var(--accent); }
+.msg-err { color: var(--danger); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+details > summary { cursor: pointer; color: var(--muted); font-size: .84rem; margin: 6px 0; }
+.chk-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0; }
+.chk-row label { display: inline-flex; align-items: center; gap: 4px; margin: 0; color: var(--text); }
+.note-box { background: #101520; border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; margin-top: 8px; font-size: .82rem; }
+.srs-pill { font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; background: var(--panel3); white-space: nowrap; }
+.srs-pill.due { background: var(--warn); color: #111; font-weight: 700; }
+.srs-pill.ok { background: var(--accent-dim); color: #c8e6c9; }
+.tool-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tool-row button { min-width: 34px; justify-content: center; }
+.tool-row button.active { background: #593d16; border-color: var(--warn); color: #ffe0b2; }
+.editor-panel { background: #101520; border: 1px solid var(--warn); border-radius: 9px; padding: 10px; }
+body.editing #toolsPanel > :not(#editorPanel) { display: none; }
+body.editing #exportControls, body.editing #retryBox, body.editing #typeMoveRow, body.editing #engineBox, body.editing #evalChartWrap, body.editing #chartLegend, body.editing #moves, body.editing #varControls, body.editing #navControls { display: none; }
+.score-box { background: #101520; border: 1px solid var(--info); border-radius: 9px; padding: 10px; margin-top: 8px; }
+.score-table { width: 100%; border-collapse: collapse; font-size: .84rem; text-align: center; }
+.score-table td, .score-table th { padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.score-table td:first-child { text-align: left; color: var(--muted); }
+.score-result { font-size: 1.1rem; font-weight: 800; margin-top: 6px; }
+
+/* Partida actual */
+.game-card { background: #101520; border: 1px solid var(--border); border-radius: 9px; padding: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.gc-row { display: flex; gap: 6px; align-items: center; }
+.gc-row input { flex: 1; min-width: 0; }
+.star-btn { font-size: 1.25rem; line-height: 1; padding: 4px 8px; color: #ffd54f; }
+.star-btn.on { background: #4a3b10; border-color: #ffd54f; }
+.save-state { font-size: .76rem; color: var(--muted); }
+.save-state.dirty { color: var(--warn); }
+.save-state.saved { color: var(--accent); }
+/* Ocupación */
+.storage-box { background: #101520; border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; margin-bottom: 10px; }
+.storage-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.storage-head b { margin-right: auto; }
+.meter-row { display: grid; grid-template-columns: 200px 1fr 150px; gap: 8px; align-items: center; font-size: .76rem; color: var(--muted); margin: 3px 0; }
+.meter { height: 9px; background: var(--panel2); border-radius: 5px; overflow: hidden; border: 1px solid var(--border); }
+.meter > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.meter-txt { text-align: right; font-variant-numeric: tabular-nums; }
+/* Sub-pestañas */
+.subtabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 8px; }
+.sub-btn { justify-content: center; font-size: .78rem; padding: 6px 4px; }
+.sub-btn.active { background: var(--panel3); border-color: var(--info); }
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-row input { flex: 1; min-width: 160px; }
+.filter-row select { width: auto; }
+.lib-table td { vertical-align: middle; }
+.lib-table tr.current { background: rgba(102,187,106,.12); }
+.lib-title { font-weight: 700; }
+.lib-sub { font-size: .74rem; color: var(--muted); }
+.tag { display: inline-block; background: var(--panel3); border-radius: 10px; padding: 0 7px; font-size: .7rem; margin: 1px 2px 1px 0; white-space: nowrap; }
+.star-cell { cursor: pointer; font-size: 1.05rem; color: #ffd54f; text-align: center; }
+.row-actions { white-space: nowrap; text-align: right; }
+/* Marcadores y problemas */
+.mark-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 460px; overflow-y: auto; }
+.mark-card { display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; align-items: start; background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 7px; cursor: pointer; }
+.mark-card:hover { border-color: #4b5d7c; }
+.mark-head { font-weight: 700; font-size: .84rem; }
+.mark-note { font-size: .82rem; color: #c8d1de; margin-top: 2px; white-space: pre-wrap; }
+.mark-meta { font-size: .72rem; color: var(--muted); margin-top: 3px; }
+.mark-actions { display: flex; flex-direction: column; gap: 4px; }
+.mini { width: 96px; height: 96px; display: block; border-radius: 3px; }
+mark { background: #ffd54f; color: #111; border-radius: 2px; padding: 0 1px; }
+.prob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-top: 8px; }
+.prob-card { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 6px; cursor: pointer; display: flex; gap: 7px; align-items: center; text-align: left; }
+.prob-card:hover { border-color: #4b5d7c; }
+.prob-card.done { border-color: var(--accent); }
+.prob-card .mini { width: 46px; height: 46px; flex: none; }
+.prob-card b { font-size: .78rem; display: block; }
+.prob-card span { font-size: .7rem; color: var(--muted); }
+.cat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-chip.active { background: #593d16; border-color: var(--warn); }
+.app-footer { text-align: center; color: var(--muted); font-size: .76rem; padding: 6px 12px 22px; }
+.link-inline { background: none; border: 0; padding: 0; color: var(--info); text-decoration: underline; cursor: pointer; font-size: inherit; display: inline; }
+.link-inline:hover:not(:disabled) { background: none; }
+.lic-p { font-size: .86rem; }
+.lic-text { white-space: pre-wrap; font-size: .74rem; background: #0e131d; border: 1px solid var(--border); border-radius: 6px; padding: 8px; max-height: 260px; overflow: auto; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--panel3); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; z-index: 300; opacity: 0; transition: opacity .25s; pointer-events: none; max-width: 90vw; }
+.toast.show { opacity: 1; }
+.st-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 6px; margin: 6px 0; }
+.st-tile { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.st-tile span { font-size: .72rem; color: var(--muted); }
+.st-tile b { font-size: 1.05rem; }
+/* Impresión */
+.print-view { display: none; }
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  body > *:not(#printView) { display: none !important; }
+  .print-view { display: block !important; font: 11pt/1.5 Georgia, "Times New Roman", serif; color: #000; }
+  .print-view h1 { font-size: 16pt; margin: 0 0 2px; }
+  .print-view .pmeta { color: #444; font-size: 10pt; margin-bottom: 10px; }
+  .print-view figure { margin: 8px 0 14px; break-inside: avoid; text-align: center; }
+  .print-view figure svg { width: 12cm; height: 12cm; }
+  .print-view figcaption { font-size: 9.5pt; color: #333; }
+  .print-view .pcom { font-size: 10pt; text-align: left; margin: 4px 0; }
+  .print-view .pfoot { margin-top: 16px; color: #777; font-size: 8pt; text-align: right; }
+}
+
+@media (max-width: 980px) {
+  header { position: static; }
+  main { grid-template-columns: 1fr; }
+  .mode-tabs { grid-template-columns: repeat(3, 1fr); }
+  .meter-row { grid-template-columns: 1fr; gap: 2px; }
+  .meter-txt { text-align: left; }
+  .eco-banner { max-width: 70vw; }
+}
+@media (max-width: 520px) {
+  header { padding: 8px 10px; }
+  main { padding: 8px; }
+  .panel { padding: 9px; }
+  .grid2, .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
+  .subtabs { grid-template-columns: 1fr 1fr; }
+  .gc-row { flex-wrap: wrap; }
+  .mark-card { grid-template-columns: 64px 1fr; }
+  .mark-card .mark-actions { grid-column: 1 / -1; flex-direction: row; }
+  .mini { width: 64px; height: 64px; }
+  .hide-sm { display: none; }
+}
+/* ---------- Móvil en vertical ---------- */
+.menu-btn { display: none; }
+@media (max-width: 640px) {
+  header { padding: 6px 8px; gap: 5px; }
+  .brand-title { width: 100%; justify-content: space-between; }
+  h1 { font-size: 1rem; }
+  .eco-banner { max-width: 62vw; font-size: .74rem; }
+  .header-actions { width: 100%; gap: 4px; }
+  .header-actions > button { padding: 6px 9px; font-size: .82rem; }
+  .menu-btn { display: inline-flex; margin-left: auto; }
+  .menu-btn[aria-expanded="true"] { background: var(--panel3); }
+  header:not(.menu-open) .hdr-extra { display: none; }
+  header.menu-open .header-actions select { flex: 1 1 30%; min-width: 0; font-size: .8rem; }
+  main { padding: 6px; gap: 8px; }
+  .panel { padding: 7px; }
+  .board-panel .board-side { display: flex; flex-direction: column; }
+  .board-side > * { order: 20; }
+  #navControls { order: 1; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 6px; }
+  #navControls button { min-height: 42px; padding: 4px 2px; justify-content: center; font-size: .9rem; }
+  #navControls .wide-nav { grid-column: span 3; min-height: 34px; font-size: .78rem; }
+  #statusText { order: 2; }
+  #retryBox, #cpuBox, #probBox, #scoreBoxLeft { order: 3; }
+  #moves { order: 4; max-height: 32vh; }
+  #varControls { order: 5; }
+  #engineBox { order: 7; }
+  #evalChartWrap { order: 8; }
+  #chartLegend { order: 9; }
+  #exportControls { order: 10; }
+  .board-stage { grid-template-columns: 12px 1fr; gap: 5px; }
+  .eval-score-text { display: none; }
+  .player-bar { padding: 3px 9px; min-height: 28px; margin-bottom: 4px; font-size: .84rem; }
+  .player-bar.bottom { margin-top: 4px; }
+  .mode-tabs { display: flex; overflow-x: auto; scrollbar-width: none; gap: 3px; }
+  .mode-tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { flex: 1 0 auto; padding: 8px 9px; white-space: nowrap; }
+}
+/* ---------- Móvil en horizontal ---------- */
+@media (orientation: landscape) and (max-height: 540px) {
+  header { position: static; padding: 4px 10px; flex-wrap: nowrap; }
+  h1 { font-size: .95rem; }
+  .eco-banner { max-width: 30vw; font-size: .72rem; }
+  .header-actions { flex-wrap: nowrap; overflow-x: auto; gap: 4px; scrollbar-width: none; }
+  .header-actions > * { flex: none; padding: 4px 8px; font-size: .78rem; }
+  .menu-btn { display: inline-flex; }
+  header:not(.menu-open) .hdr-extra { display: none; }
+  .hide-sm { display: none; }
+  main { grid-template-columns: 1fr; padding: 4px 6px; gap: 8px; }
+  .panel { padding: 6px; }
+  .board-panel { display: flex; gap: 10px; align-items: flex-start; height: calc(100vh - 52px); height: calc(100dvh - 52px); }
+  .board-main { flex: none; width: calc(100vh - 100px); width: calc(100dvh - 100px); }
+  .board-stage { grid-template-columns: 12px 1fr; gap: 4px; }
+  .eval-score-text { display: none; }
+  .player-bar { padding: 1px 8px; min-height: 22px; margin-bottom: 3px; font-size: .78rem; }
+  .player-bar.bottom { margin-top: 3px; }
+  .board-side { flex: 1; min-width: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; padding-right: 2px; }
+  .board-side > * { order: 20; flex: none; }
+  #navControls { order: 1; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-top: 0; }
+  #navControls button { min-height: 36px; padding: 3px 2px; justify-content: center; }
+  #navControls .wide-nav { grid-column: span 3; min-height: 28px; font-size: .74rem; }
+  #statusText { order: 2; margin-top: 3px; }
+  #retryBox, #cpuBox, #probBox, #scoreBoxLeft { order: 3; }
+  #moves { order: 4; max-height: 52vh; max-height: 52dvh; min-height: 90px; margin-top: 4px; }
+  #varControls { order: 5; }
+  #engineBox { order: 7; }
+  #evalChartWrap { order: 8; }
+  #exportControls { order: 10; }
+  .mode-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+  .tab-btn { flex: 1 0 auto; white-space: nowrap; }
+}
+</style>
+</head>
+<body data-theme="wood">
+
+<header>
+  <div class="brand-title">
+    <h1>⚫ GoBase</h1>
+    <span id="infoBanner" class="eco-banner" title="Tablero, komi y reglas de la partida">19×19 · komi 6,5</span>
+  </div>
+  <div class="header-actions">
+    <select id="stoneStyleSelect" class="hdr-extra" title="Dibujo de las piedras" aria-label="Dibujo de las piedras">
+      <option value="real">Piedras: Realistas</option>
+      <option value="flat">Piedras: Planas</option>
+      <option value="contrast">Piedras: Alto contraste</option>
+    </select>
+    <select id="themeSelect" class="hdr-extra" title="Color del tablero" aria-label="Color del tablero">
+      <option value="wood">Madera</option>
+      <option value="kaya">Kaya clara</option>
+      <option value="walnut">Nogal</option>
+      <option value="green">Verde</option>
+      <option value="slate">Pizarra</option>
+      <option value="paper">Papel</option>
+    </select>
+    <button id="playCpuToggle" class="info-btn" title="Jugar contra el motor: tamaño, nivel, hándicap y reloj">🤖 Jugar vs CPU</button>
+    <button id="soundToggle" class="hdr-extra" title="Sonido de las piedras" aria-label="Sonido">🔊</button>
+    <button id="settingsBtn" title="Ajustes (motor, análisis, reglas)" aria-label="Ajustes">⚙</button>
+    <button id="installBtn" class="primary" hidden title="Instalar GoBase como aplicación (funciona sin conexión)">⬇ Instalar</button>
+    <button id="helpBtn" title="Guía completa y atajos (?)" aria-label="Ayuda">❓ Ayuda</button>
+    <button id="newGame" class="danger" title="Empezar una partida nueva (tamaño, komi, hándicap)">Nueva</button>
+    <button id="menuBtn" class="menu-btn" title="Piedras, colores y sonido" aria-label="Más opciones" aria-expanded="false">☰</button>
+  </div>
+</header>
+
+<main>
+  <!-- ================= COLUMNA IZQUIERDA ================= -->
+  <section class="panel board-panel" aria-label="Tablero">
+    <div class="board-main">
+      <div class="player-bar" id="topBar">
+        <span class="player-name"><span class="chip w"></span><span id="whiteName">Blancas</span> <span id="whiteRank" class="player-rank"></span></span>
+        <div class="bar-right"><span id="whiteCaps" title="Prisioneros que han capturado las blancas">0 capturas</span><span id="whiteClock" class="clock" hidden></span></div>
+      </div>
+      <div class="board-stage">
+        <div class="eval-bar-outer" id="evalBarOuter" title="Probabilidad de ganar según el motor (arriba blancas, abajo negras)">
+          <div class="eval-bar-white" id="evalBarWhite"></div>
+          <div class="eval-score-text top" id="evalTopText"></div>
+          <div class="eval-score-text bot" id="evalBotText"></div>
+        </div>
+        <div class="board-wrap" id="boardWrap">
+          <svg id="goban" class="goban" role="img" aria-label="Tablero de go"></svg>
+        </div>
+      </div>
+      <div class="player-bar bottom" id="bottomBar">
+        <span class="player-name"><span class="chip b"></span><span id="blackName">Negras</span> <span id="blackRank" class="player-rank"></span></span>
+        <div class="bar-right"><span id="blackCaps" title="Prisioneros que han capturado las negras">0 capturas</span><span id="blackClock" class="clock" hidden></span></div>
+      </div>
+    </div>
+    <div class="board-side">
+      <div class="engine-box" id="engineBox">
+        <div class="engine-head">
+          <div class="left">
+            <span id="engineBadge" class="engine-badge">⚙ Motor GoBase</span>
+            <span id="engineMeta" class="engine-meta"></span>
+          </div>
+          <div class="controls" style="margin:0">
+            <label class="switch" title="Análisis continuo de la posición (tecla E)"><input type="checkbox" id="liveToggle"> Analizar</label>
+            <label class="switch" title="Mostrar en el tablero las mejores jugadas del motor"><input type="checkbox" id="candToggle" checked> Candidatas</label>
+            <label class="switch" title="Territorio estimado: de quién es cada punto (tecla T)"><input type="checkbox" id="ownToggle"> Territorio</label>
+            <button id="playBestBtn" class="sm-btn" title="Jugar la mejor jugada del motor">⚡ Jugar</button>
+          </div>
+        </div>
+        <div class="engine-lines" id="engineLines"><div class="pv-empty">Pulsa «Analizar» (E) para que el motor piense en esta posición.</div></div>
+      </div>
+      <div class="eval-chart-wrap" id="evalChartWrap" title="Probabilidad de victoria de las negras a lo largo de la línea principal. Clic para saltar a esa jugada.">
+        <svg id="evalChartSvg" viewBox="0 0 600 64" preserveAspectRatio="none"></svg>
+        <div id="chartMsg" class="chart-msg">Pulsa «🤖 Analizar y comentar» en 📖 Estudio para ver el gráfico de la partida.</div>
+      </div>
+      <div id="chartLegend" class="chart-legend" hidden>
+        <span>▼ abajo ventaja negras · ▲ arriba blancas · <span style="color:#ffa726">|</span> jugada actual</span>
+        <span><i style="background:#ef5350"></i>??</span><span><i style="background:#ff7043"></i>?</span><span><i style="background:#ffca28"></i>?!</span>
+      </div>
+      <div class="controls" id="navControls">
+        <button id="startBtn" title="Inicio (Inicio)" aria-label="Ir al inicio">|◀</button>
+        <button id="back10Btn" title="10 jugadas atrás (RePág)" aria-label="10 atrás">◀◀</button>
+        <button id="backBtn" title="Atrás (←)" aria-label="Atrás">◀</button>
+        <button id="forwardBtn" title="Adelante (→)" aria-label="Adelante">▶</button>
+        <button id="fwd10Btn" title="10 jugadas adelante (AvPág)" aria-label="10 adelante">▶▶</button>
+        <button id="endBtn" title="Final (Fin)" aria-label="Ir al final">▶|</button>
+        <button id="playBtn" class="wide-nav" title="Reproducción automática (Espacio)">▶ Auto</button>
+        <button id="passBtn" class="wide-nav" title="Pasar (P)">✋ Pasar</button>
+        <button id="editPosBtn" class="warn-btn wide-nav" title="Colocar piedras libremente (problemas, posiciones)">✏ Colocar piedras</button>
+        <button id="undoBtn" class="danger wide-nav" title="Borrar esta jugada y todo lo que sigue">✂ Cortar</button>
+      </div>
+      <div id="statusText" class="status-line" aria-live="polite"></div>
+      <div id="retryBox" class="retry-box" hidden aria-live="polite" tabindex="-1"></div>
+      <div id="cpuBox" class="retry-box" hidden aria-live="polite"></div>
+      <div id="probBox" class="retry-box" hidden aria-live="polite"></div>
+      <div id="scoreBoxLeft" class="score-box" hidden aria-live="polite"></div>
+      <div class="type-move" id="typeMoveRow">
+        <input id="moveTyped" placeholder="⌨ Escribe una jugada (D4, Q16, pd, pasa…) y pulsa Intro" aria-label="Escribir una jugada" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="moves" class="moves-box" aria-label="Jugadas y variantes"></div>
+      <div class="controls" id="varControls">
+        <button id="promoteVarBtn" class="sm-btn" title="Subir esta variante un puesto">⬆ Promover variante</button>
+        <button id="mainVarBtn" class="sm-btn" title="Convertir esta línea en la principal">★ Hacer principal</button>
+        <button id="markBtn2" class="sm-btn warn-btn" title="Marcar esta posición (M)">📌 Marcar</button>
+        <button id="hintBtn" class="sm-btn info-btn" title="Pista: la mejor jugada del motor (H)">💡 Pista</button>
+        <label class="switch" title="Números en las piedras (N)"><input type="checkbox" id="numToggle"> Números</label>
+      </div>
+      <div class="controls" id="exportControls">
+        <button id="pngBtn" class="sm-btn" title="Descargar la posición como imagen PNG (y copiarla al portapapeles)">🖼 Imagen</button>
+        <button id="printBtn" class="sm-btn" title="Imprimir o guardar como PDF la partida en figuras numeradas, con comentarios">🖨 Imprimir</button>
+        <button id="linkBtn" class="sm-btn" title="Copiar un enlace que abre esta partida en esta jugada">🔗 Enlace</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COLUMNA DERECHA ================= -->
+  <section class="panel" id="toolsPanel" aria-label="Herramientas">
+    <div id="editorPanel" class="editor-panel" hidden>
+      <h2><span>✏ Colocar piedras</span><button id="edDoneBtn" class="sm-btn primary">✔ Hecho</button></h2>
+      <p class="small">• Elige <b>⚫</b>, <b>⚪</b> o <b>🧽</b> y pulsa puntos del tablero. Clic derecho (o Mayús+clic) pone el otro color.<br>
+        • Las piedras se colocan sin capturar nada (como AB/AW en SGF), en un nodo nuevo si la posición ya tenía jugadas.</p>
+      <div class="tool-row" id="edTools">
+        <button data-ed="1" class="active">⚫ Negras</button><button data-ed="2">⚪ Blancas</button><button data-ed="0">🧽 Borrar</button><button data-ed="alt">⚫⚪ Alternar</button>
+      </div>
+      <div class="grid2">
+        <div><label for="edTurn">Después juegan</label><select id="edTurn"><option value="1">Negras</option><option value="2">Blancas</option></select></div>
+        <div><label>&nbsp;</label><button id="edClearBtn" class="sm-btn danger">🧹 Vaciar el tablero</button></div>
+      </div>
+      <div id="edMsg" class="small" aria-live="polite"></div>
+    </div>
+
+    <div class="game-card" id="gameCard">
+      <div class="gc-row">
+        <button id="favToggle" class="star-btn" title="Favorita (la guarda en la biblioteca)" aria-label="Favorita">☆</button>
+        <input id="gameName" placeholder="Título de la partida…" aria-label="Título de la partida">
+        <button id="saveGame" class="primary" title="Guardar esta partida en tu biblioteca">💾 Guardar en biblioteca</button>
+      </div>
+      <div class="gc-row">
+        <input id="gameTags" list="tagList" placeholder="Etiquetas separadas por comas: club, torneo, contra la CPU…" aria-label="Etiquetas">
+        <datalist id="tagList"></datalist>
+        <button id="markBtn" class="warn-btn" title="Marcar esta posición">📌 Marcar posición</button>
+      </div>
+      <div id="saveState" class="save-state">No guardada en la biblioteca</div>
+    </div>
+
+    <div class="mode-tabs" role="tablist">
+      <button class="tab-btn active" data-tab="study" role="tab">📖 Estudio</button>
+      <button class="tab-btn" data-tab="score" role="tab">🧮 Recuento</button>
+      <button class="tab-btn" data-tab="openings" role="tab">🌍 Aperturas</button>
+      <button class="tab-btn" data-tab="library" role="tab">📚 Biblioteca</button>
+      <button class="tab-btn" data-tab="train" role="tab">🎯 Entrenar</button>
+    </div>
+
+    <!-- ESTUDIO -->
+    <div id="tab-study" class="tab-pane active" role="tabpanel">
+      <h2>
+        <span>Análisis de la partida</span>
+        <span class="controls" style="margin:0">
+          <button id="analyseBtn" class="warn-btn sm-btn" title="Evalúa cada jugada, marca errores y redacta comentarios">🤖 Analizar y comentar</button>
+          <button id="analyseVarBtn" class="sm-btn" hidden title="Analizar sólo la variante en la que estás">🌿 Analizar esta variante</button>
+          <button id="cancelAnalysisBtn" class="sm-btn danger" hidden>⏹ Detener</button>
+        </span>
+      </h2>
+      <div class="progress" id="analysisProgress"><div></div></div>
+      <div id="analysisStatus" class="small"></div>
+      <div id="reportBox" class="report">
+        <table>
+          <thead><tr><th></th><th id="repBName">Negras</th><th id="repWName">Blancas</th></tr></thead>
+          <tbody>
+            <tr><td>Coincidencia con el motor</td><td class="acc" id="repBMatch">–</td><td class="acc" id="repWMatch">–</td></tr>
+            <tr><td>Pérdida media por jugada</td><td id="repBLoss">–</td><td id="repWLoss">–</td></tr>
+            <tr><td><span class="nag-inacc">?!</span> Dudosas</td><td id="repBInacc">0</td><td id="repWInacc">0</td></tr>
+            <tr><td><span class="nag-mistake">?</span> Errores</td><td id="repBMistake">0</td><td id="repWMistake">0</td></tr>
+            <tr><td><span class="nag-blunder">??</span> Errores graves</td><td id="repBBlunder">0</td><td id="repWBlunder">0</td></tr>
+          </tbody>
+        </table>
+        <p class="small">Pérdida = cuánto baja la probabilidad de ganar con la jugada. ?! ≥ 6 % · ? ≥ 12 % · ?? ≥ 24 %. El motor es de Monte Carlo y no tiene red neuronal: tómalo como orientación, sobre todo en 19×19.</p>
+        <div id="retryStart" class="controls" hidden></div>
+        <div id="reportExtra" class="report-extra"></div>
+      </div>
+
+      <details id="headersDetails">
+        <summary>Datos de la partida (jugadores, komi, reglas, resultado)</summary>
+        <div class="grid2">
+          <div><label for="hPB">Negras</label><input id="hPB" data-h="PB"></div>
+          <div><label for="hBR">Rango de negras</label><input id="hBR" data-h="BR" placeholder="5k, 1d…"></div>
+          <div><label for="hPW">Blancas</label><input id="hPW" data-h="PW"></div>
+          <div><label for="hWR">Rango de blancas</label><input id="hWR" data-h="WR"></div>
+          <div><label for="hKM">Komi</label><input id="hKM" data-h="KM" inputmode="decimal"></div>
+          <div><label for="hRU">Reglas</label><input id="hRU" data-h="RU" placeholder="Japanese, Chinese…"></div>
+          <div><label for="hRE">Resultado</label><input id="hRE" data-h="RE" placeholder="B+R, W+3.5, 0…"></div>
+          <div><label for="hDT">Fecha</label><input id="hDT" data-h="DT" placeholder="AAAA-MM-DD"></div>
+          <div><label for="hEV">Evento</label><input id="hEV" data-h="EV"></div>
+          <div><label for="hPC">Lugar</label><input id="hPC" data-h="PC"></div>
+        </div>
+      </details>
+
+      <div class="grid2">
+        <div>
+          <label for="branchMode">Al jugar en mitad de la partida</label>
+          <select id="branchMode"><option value="variation">Crear variante</option><option value="overwrite">Sobrescribir la línea</option></select>
+        </div>
+        <div>
+          <label for="clickMode">Clic en el tablero</label>
+          <select id="clickMode"><option value="play">Jugar piedra</option><option value="mark">Poner la marca elegida</option></select>
+        </div>
+      </div>
+      <label for="moveInput">Partida en SGF (de OGS, KGS, Fox, GoGoD…) o jugadas sueltas (D4 Q16 C3 o pd dp cc)</label>
+      <textarea id="moveInput" spellcheck="false" placeholder="(;GM[1]FF[4]SZ[19]KM[6.5]PB[Negras]PW[Blancas];B[pd];W[dp];B[pq];W[dd])"></textarea>
+      <div class="controls">
+        <button id="importBtn" class="primary" title="Sustituye la partida actual">Importar</button>
+        <button id="appendBtn" title="Añade las jugadas desde la posición actual">Añadir desde aquí</button>
+        <button id="openSgfBtn" title="Abrir un fichero .sgf (sólo se abre: no se guarda)">📂 Abrir .sgf</button>
+        <input type="file" id="sgfFileInput" accept=".sgf,.txt" multiple hidden>
+      </div>
+      <div class="controls">
+        <button id="copySgfBtn" class="sm-btn">📋 Copiar SGF</button>
+        <button id="downloadSgfBtn" class="sm-btn">⬇ Descargar .sgf</button>
+        <button id="downloadJsonBtn" class="sm-btn" title="Con variantes, comentarios, marcas y análisis">⬇ Completa (.json)</button>
+        <label class="switch" title="Escribe los comentarios del motor dentro del SGF"><input type="checkbox" id="sgfEngineToggle" checked> Incluir el análisis</label>
+      </div>
+      <div id="importResult" class="small" aria-live="polite"></div>
+
+      <div class="section">
+        <h2><span>Comentario</span><span id="currentMoveBadge" class="small">Posición inicial</span></h2>
+        <div class="controls" style="margin: 4px 0 6px">
+          <button class="sm-btn nag-btn" data-nag="!" title="Buena jugada (TE)">!</button>
+          <button class="sm-btn nag-btn" data-nag="!!" title="Muy buena (TE[2])">!!</button>
+          <button class="sm-btn nag-btn" data-nag="!?" title="Interesante (IT)">!?</button>
+          <button class="sm-btn nag-btn" data-nag="?!" title="Dudosa (DO)">?!</button>
+          <button class="sm-btn nag-btn" data-nag="?" title="Error (BM)">?</button>
+          <button class="sm-btn nag-btn" data-nag="??" title="Error grave (BM[2])">??</button>
+          <button class="sm-btn nag-btn" data-nag="" title="Quitar el símbolo">Limpiar</button>
+          <select id="posNag" style="width:auto" aria-label="Valoración de la posición">
+            <option value="">Posición: —</option><option value="GB">⚫ mejor (GB)</option><option value="GW">⚪ mejor (GW)</option><option value="DM">Igualada (DM)</option><option value="UC">Poco clara (UC)</option>
+          </select>
+        </div>
+        <textarea id="annotation" placeholder="Notas sobre la jugada que lleva a esta posición…"></textarea>
+        <div id="engineNote" class="note-box" hidden></div>
+        <div class="controls">
+          <button id="explainMoveBtn" class="sm-btn info-btn" title="El motor evalúa la jugada y redacta un comentario en español">✍ Redactar comentario con el motor</button>
+        </div>
+        <h3>Marcas en el tablero</h3>
+        <div class="tool-row" id="markTools">
+          <button data-mk="TR" title="Triángulo">△</button><button data-mk="SQ" title="Cuadrado">□</button><button data-mk="CR" title="Círculo">○</button><button data-mk="MA" title="Aspa">✕</button>
+          <button data-mk="LBA" title="Letras A, B, C…">A</button><button data-mk="LB1" title="Números 1, 2, 3…">1</button><button data-mk="DEL" title="Borrar la marca del punto">🧽</button>
+          <button id="clearMarksBtn" class="sm-btn" title="Borrar todas las marcas de esta posición">Borrar todas</button>
+        </div>
+        <p class="small">Elige una marca y pulsa en el tablero (o pon «Clic en el tablero: Poner la marca elegida»). Con una marca elegida, el clic marca en lugar de jugar.</p>
+      </div>
+    </div>
+
+    <!-- RECUENTO -->
+    <div id="tab-score" class="tab-pane" role="tabpanel">
+      <h2><span>🧮 Recuento de la posición</span></h2>
+      <div class="grid3">
+        <div><label for="scRules">Reglas</label><select id="scRules"><option value="japanese">Japonesas (territorio)</option><option value="chinese">Chinas (área)</option></select></div>
+        <div><label for="scKomi">Komi</label><input id="scKomi" inputmode="decimal" value="6.5"></div>
+        <div><label>&nbsp;</label><button id="scoreBtn" class="primary">🧮 Contar ahora</button></div>
+      </div>
+      <p class="small">Al contar, el motor propone qué grupos están muertos (aparecen transparentes). Pulsa un grupo para cambiarlo de vivo a muerto. Las zonas neutrales (dame) y los ojos en seki no cuentan para nadie.</p>
+      <div id="scoreBox" class="score-box" hidden>
+        <table class="score-table">
+          <thead><tr><th></th><th>⚫ Negras</th><th>⚪ Blancas</th></tr></thead>
+          <tbody>
+            <tr><td>Territorio</td><td id="scBT">0</td><td id="scWT">0</td></tr>
+            <tr id="scPrisRow"><td>Prisioneros (capturas + muertas)</td><td id="scBP">0</td><td id="scWP">0</td></tr>
+            <tr id="scStonesRow" hidden><td>Piedras en el tablero</td><td id="scBS">0</td><td id="scWS">0</td></tr>
+            <tr><td>Komi</td><td>–</td><td id="scKm">0</td></tr>
+            <tr><td><b>Total</b></td><td id="scBTot"><b>0</b></td><td id="scWTot"><b>0</b></td></tr>
+          </tbody>
+        </table>
+        <div id="scResult" class="score-result">–</div>
+        <div class="controls">
+          <button id="scAutoBtn" class="sm-btn" title="Volver a pedir al motor qué está muerto">🤖 Proponer muertas otra vez</button>
+          <button id="scSetResultBtn" class="sm-btn warn-btn" title="Escribe el resultado en los datos de la partida (RE)">✔ Poner este resultado en la partida</button>
+          <button id="scExitBtn" class="sm-btn danger">✖ Salir del recuento</button>
+        </div>
+      </div>
+      <div class="section">
+        <h2><span>📈 Estimación en vivo</span></h2>
+        <p class="small">Con «Analizar» encendido, el motor estima la ventaja en puntos y, con «Territorio», pinta de quién es cada punto. Sirve en cualquier momento de la partida, no sólo al final.</p>
+        <div id="liveEstimate" class="note-box">—</div>
+      </div>
+      <div class="section">
+        <h2><span>🎲 ¿Quién gana? (contar en 9×9)</span><span id="countQuizScore" class="srs-pill">0 / 0</span></h2>
+        <p class="small">La CPU juega una partida rápida de 9×9 contra sí misma hasta el final. Cuenta tú (reglas japonesas, komi 6,5) y di quién gana y por cuánto.</p>
+        <div class="controls"><button id="countQuizBtn" class="primary">▶ Nueva posición</button></div>
+        <div id="countQuizBox" class="note-box" hidden>
+          <div class="grid3">
+            <div><label for="cqWho">Gana</label><select id="cqWho"><option value="B">Negras</option><option value="W">Blancas</option></select></div>
+            <div><label for="cqBy">Por (puntos)</label><input id="cqBy" inputmode="decimal" placeholder="3.5"></div>
+            <div><label>&nbsp;</label><button id="cqCheckBtn" class="primary">✔ Comprobar</button></div>
+          </div>
+          <div id="cqMsg" class="small"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APERTURAS -->
+    <div id="tab-openings" class="tab-pane" role="tabpanel">
+      <h2><span>📚 Explorador de tus partidas</span><span id="explorerInfo" class="small"></span></h2>
+      <p class="small">Qué se jugó desde la posición del tablero en las partidas de tu biblioteca y del fichero abierto, contando las 8 simetrías del tablero (giros y reflejos). Pulsa una fila para jugarla.</p>
+      <div class="cb-table-wrap" style="max-height:260px">
+        <table class="cb-table">
+          <thead><tr><th>Jugada</th><th class="num">Partidas</th><th>Ganan negras / blancas</th></tr></thead>
+          <tbody id="explorerBody"><tr><td colspan="3" class="small">—</td></tr></tbody>
+        </table>
+      </div>
+      <div class="section">
+        <h2><span>📍 Puntos de la esquina</span></h2>
+        <p class="small">Pulsa uno para verlo en el tablero (19×19, esquina de arriba a la derecha).</p>
+        <div class="cb-table-wrap" style="max-height:240px">
+          <table class="cb-table">
+            <thead><tr><th>Punto</th><th>Dónde</th><th class="hide-sm">Idea</th></tr></thead>
+            <tbody id="cornerBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <h2><span>🗺 Formaciones de apertura</span></h2>
+        <div id="fusekiList" class="controls"></div>
+      </div>
+      <div class="section">
+        <h2><span>💡 Consejos para la apertura</span></h2>
+        <ul id="openingTips" class="small" style="padding-left:18px"></ul>
+      </div>
+    </div>
+
+    <!-- BIBLIOTECA -->
+    <div id="tab-library" class="tab-pane" role="tabpanel">
+      <div class="storage-box" id="storageBox">
+        <div class="storage-head">
+          <b>💾 Ocupación</b>
+          <span id="storagePersist" class="small"></span>
+          <button id="persistBtn" class="sm-btn" title="Pide al navegador que no borre estos datos aunque le falte espacio">🔒 Proteger datos</button>
+          <button id="storageRefreshBtn" class="sm-btn" title="Actualizar">↻</button>
+        </div>
+        <div class="meter-row"><span>Biblioteca (permanente)</span><div class="meter"><div id="meterLib"></div></div><span id="meterLibTxt" class="meter-txt"></span></div>
+        <div class="meter-row"><span>Fichero abierto (sólo memoria)</span><div class="meter"><div id="meterColl"></div></div><span id="meterCollTxt" class="meter-txt"></span></div>
+        <div id="storageDetail" class="small"></div>
+      </div>
+      <div class="subtabs" role="tablist">
+        <button class="sub-btn active" data-sub="games">📚 Partidas <span id="libCount" class="srs-pill">0</span></button>
+        <button class="sub-btn" data-sub="marks">📌 Marcadores <span id="markCount" class="srs-pill">0</span></button>
+        <button class="sub-btn" data-sub="search">🔎 Buscar</button>
+        <button class="sub-btn" data-sub="stats">📊 Estadísticas</button>
+        <button class="sub-btn" data-sub="collection">🗂 Fichero <span id="collCount" class="srs-pill">0</span></button>
+      </div>
+      <div class="subpane" id="sub-games">
+        <div class="filter-row">
+          <input id="libFilter" placeholder="Buscar por título, jugador, evento, año…" aria-label="Buscar en la biblioteca">
+          <select id="libTagFilter" aria-label="Filtrar por etiqueta"><option value="">Todas</option></select>
+          <select id="libSort" aria-label="Ordenar"><option value="updated">Recientes</option><option value="title">Título</option><option value="date">Fecha</option></select>
+        </div>
+        <div class="controls">
+          <label class="switch"><input type="checkbox" id="libSelectAll"> Todas</label>
+          <button id="libDeleteSel" class="sm-btn danger" disabled>🗑 Borrar seleccionadas</button>
+          <button id="libExportSgf" class="sm-btn" title="Exporta las seleccionadas (o las visibles) a un .sgf">⬇ Exportar .sgf</button>
+          <button id="libBackup" class="sm-btn">⬇ Copia de seguridad</button>
+          <button id="libRestore" class="sm-btn">⬆ Restaurar copia</button>
+          <input type="file" id="jsonFileInput" accept=".json" hidden>
+        </div>
+        <div class="cb-table-wrap" style="max-height:420px">
+          <table class="cb-table lib-table">
+            <thead><tr><th></th><th>⭐</th><th>Partida</th><th>Res.</th><th class="hide-sm">Etiquetas</th><th></th></tr></thead>
+            <tbody id="libBody"></tbody>
+          </table>
+        </div>
+        <div id="libStatus" class="small"></div>
+      </div>
+      <div class="subpane" id="sub-marks" hidden>
+        <div class="filter-row">
+          <input id="markFilter" placeholder="Buscar en las notas…" aria-label="Buscar marcadores">
+          <select id="markCatFilter" aria-label="Categoría"></select>
+        </div>
+        <div id="markList" class="mark-list"></div>
+      </div>
+      <div class="subpane" id="sub-search" hidden>
+        <p class="small">Busca un texto en los comentarios de todas tus partidas guardadas y en las notas de los marcadores.</p>
+        <div class="filter-row">
+          <input id="commentSearch" placeholder="Ej.: invasión, escalera, ko, yose…" aria-label="Texto a buscar">
+          <button id="commentSearchBtn" class="primary">🔎 Buscar</button>
+        </div>
+        <div id="searchResults" class="mark-list"></div>
+      </div>
+      <div class="subpane" id="sub-stats" hidden>
+        <p class="small">Con las partidas de tu biblioteca en las que juegas tú. Escribe tu nombre tal como sale en las partidas (por ejemplo, tu usuario de OGS o KGS).</p>
+        <div class="filter-row">
+          <input id="statsName" placeholder="Tu nombre en las partidas" aria-label="Tu nombre">
+          <button id="statsBtn" class="primary">📊 Calcular</button>
+        </div>
+        <div id="statsOut"></div>
+      </div>
+      <div class="subpane" id="sub-collection" hidden>
+        <p class="small">Los ficheros .sgf (también colecciones con muchas partidas) se abren <b>sólo en memoria</b>: no se guarda nada. Guarda en tu biblioteca con 💾 sólo las que te interesen.</p>
+        <div class="controls">
+          <button id="openFileBtn" class="primary">📂 Abrir .sgf</button>
+          <button id="closeCollBtn" class="sm-btn danger">✖ Cerrar fichero</button>
+        </div>
+        <input id="dbFilterInput" placeholder="Filtrar por jugador, evento o resultado…" style="margin-top:8px" aria-label="Filtrar partidas">
+        <div class="cb-table-wrap" style="max-height:380px">
+          <table class="cb-table">
+            <thead><tr><th>#</th><th>Negras</th><th>Blancas</th><th class="hide-sm">Evento</th><th>Res.</th><th></th></tr></thead>
+            <tbody id="collBody"></tbody>
+          </table>
+        </div>
+        <div class="controls"><button id="saveCollFilteredBtn" class="sm-btn warn-btn">💾 Guardar en la biblioteca las partidas filtradas</button></div>
+        <div id="dbStatus" class="small"></div>
+      </div>
+    </div>
+
+    <!-- ENTRENAR -->
+    <div id="tab-train" class="tab-pane" role="tabpanel">
+      <h2><span>🧩 Problemas</span><span id="probScore" class="srs-pill">0 resueltos</span></h2>
+      <p class="small">Vida y muerte y capturas. Juegas con negras; la CPU responde con la defensa perfecta (los resuelve un lector exacto) y acepta cualquier jugada que funcione.</p>
+      <div class="cat-chips" id="probCats">
+        <button class="sm-btn cat-chip active" data-pc="all">Todos</button>
+        <button class="sm-btn cat-chip" data-pc="ld">Vida y muerte</button>
+        <button class="sm-btn cat-chip" data-pc="cap">Capturas</button>
+      </div>
+      <div id="probGrid" class="prob-grid"></div>
+      <div class="controls">
+        <button id="openProbFileBtn" class="sm-btn" title="Problemas en SGF: la solución es la línea principal o las ramas marcadas «RIGHT» / «Correcto»">📂 Abrir problemas .sgf</button>
+        <input type="file" id="probFileInput" accept=".sgf,.txt" multiple hidden>
+        <span id="probFileInfo" class="small"></span>
+      </div>
+      <div class="section">
+        <h2><span>❌ Errores de tus partidas</span><span id="errCount" class="srs-pill">0</span></h2>
+        <p class="small">Los ? y ?? de tus partidas analizadas de la biblioteca. Busca la jugada buena; se acepta cualquiera que el motor considere casi igual de buena.</p>
+        <div class="controls">
+          <button id="errTrainBtn" class="primary">▶ Empezar</button>
+          <label class="switch"><input type="checkbox" id="errOnlyMine"> Sólo mis jugadas (nombre de 📊 Estadísticas)</label>
+        </div>
+      </div>
+      <div class="section">
+        <h2><span>🧠 Tarjetas de tus marcadores</span><span id="cardDueBadge" class="srs-pill">0 pendientes</span></h2>
+        <p class="small">Cada marcador con «entrenar» activado es una tarjeta: ves la posición y tienes que encontrar la jugada. Las que aciertas se espacian (1, 3, 7, 16, 35, 75 días); las que fallas vuelven pronto.</p>
+        <div class="controls">
+          <button id="cardsDueBtn" class="primary">▶ Repasar pendientes</button>
+          <button id="cardsAllBtn" class="sm-btn">Repasar todas</button>
+        </div>
+      </div>
+      <div class="controls"><button id="exBackBtn" class="sm-btn warn-btn" hidden>↩ Volver a la partida</button></div>
+      <div id="trainFeedback" class="note-box" aria-live="polite" hidden></div>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">
+  GoBase {{VERSION}} · © 2026 Rafael Karino Arillo ·
+  <button class="link-inline" id="licBtn" type="button">Licencia y créditos</button> ·
+  <a href="https://github.com/rkarillo-tech/gobase" target="_blank" rel="noopener noreferrer">código fuente y descargas</a>
+</footer>
+
+<!-- Nueva partida -->
+<div class="modal-back" id="newModal" role="dialog" aria-modal="true" aria-labelledby="newTitle">
+  <div class="modal">
+    <h2 id="newTitle"><span>Nueva partida</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div class="grid2">
+      <div><label for="ngSize">Tamaño</label><select id="ngSize"><option value="19">19×19</option><option value="13">13×13</option><option value="9">9×9</option><option value="7">7×7</option></select></div>
+      <div><label for="ngHandicap">Hándicap (piedras negras)</label><select id="ngHandicap"><option value="0">Sin hándicap</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></div>
+      <div><label for="ngKomi">Komi</label><input id="ngKomi" value="6.5" inputmode="decimal"></div>
+      <div><label for="ngRules">Reglas</label><select id="ngRules"><option value="japanese">Japonesas</option><option value="chinese">Chinas</option></select></div>
+      <div><label for="ngPB">Negras</label><input id="ngPB" placeholder="Negras"></div>
+      <div><label for="ngPW">Blancas</label><input id="ngPW" placeholder="Blancas"></div>
+    </div>
+    <p class="small">Con hándicap el komi habitual es 0,5. La partida nueva no se guarda hasta que pulses 💾.</p>
+    <div class="controls"><button id="ngStartBtn" class="primary">▶ Empezar</button></div>
+  </div>
+</div>
+
+<!-- Jugar contra la CPU -->
+<div class="modal-back" id="cpuModal" role="dialog" aria-modal="true" aria-labelledby="cpuTitle">
+  <div class="modal">
+    <h2 id="cpuTitle"><span>🤖 Jugar contra la CPU</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div class="grid2">
+      <div><label for="cpuSize">Tamaño</label><select id="cpuSize"><option value="9">9×9 (recomendado)</option><option value="13">13×13</option><option value="19">19×19</option></select></div>
+      <div><label for="cpuColor">Juegas con</label><select id="cpuColor"><option value="1">⚫ Negras</option><option value="2">⚪ Blancas</option><option value="0">Al azar</option></select></div>
+      <div><label for="cpuLevel">Nivel</label><select id="cpuLevel">
+        <option value="1">1 · Principiante</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option>
+        <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8 · Máximo</option></select></div>
+      <div><label for="cpuHandicap">Hándicap para negras</label><select id="cpuHandicap"><option value="0">Sin hándicap</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></div>
+      <div><label for="cpuKomi">Komi</label><input id="cpuKomi" value="6.5" inputmode="decimal"></div>
+      <div><label for="cpuRules">Reglas</label><select id="cpuRules"><option value="japanese">Japonesas</option><option value="chinese">Chinas</option></select></div>
+      <div><label for="cpuMain">Tiempo principal</label><select id="cpuMain"><option value="0">Sin reloj</option><option value="1">1 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="20">20 min</option><option value="30">30 min</option></select></div>
+      <div><label for="cpuByo">Byo-yomi</label><select id="cpuByo"><option value="0">Sin byo-yomi</option><option value="10">3 × 10 s</option><option value="20">3 × 20 s</option><option value="30" selected>3 × 30 s</option><option value="60">5 × 60 s</option></select></div>
+    </div>
+    <p class="small">La CPU pasa cuando la partida está acabada y se rinde si va claramente perdida. Al final, los dos pasáis y se cuenta: puedes corregir las piedras muertas antes de aceptar el resultado.</p>
+    <div class="controls"><button id="cpuStartBtn" class="primary">▶ Empezar</button></div>
+  </div>
+</div>
+
+<!-- Marcador -->
+<div class="modal-back" id="markModal" role="dialog" aria-modal="true" aria-labelledby="markTitle">
+  <div class="modal">
+    <h2 id="markTitle"><span>📌 Marcar posición</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <label>Categoría</label>
+    <div class="cat-chips" id="markCats"></div>
+    <label for="markNote">Nota</label>
+    <textarea id="markNote" placeholder="Qué hay que recordar de esta posición…"></textarea>
+    <label class="switch" style="margin-top:8px"><input type="checkbox" id="markTrain" checked> Entrenar como tarjeta (encontrar la jugada)</label>
+    <div class="controls"><button id="markSaveBtn" class="primary">💾 Guardar marcador</button><button id="markDeleteBtn" class="sm-btn danger" hidden>🗑 Quitar</button></div>
+    <div id="markMsg" class="small"></div>
+  </div>
+</div>
+
+<!-- Ajustes -->
+<div class="modal-back" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal">
+    <h2 id="settingsTitle"><span>⚙ Ajustes</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div class="grid2">
+      <div><label for="setAnalysis">Fuerza al analizar la partida</label><select id="setAnalysis"><option value="1">Rápido</option><option value="2" selected>Normal</option><option value="4">Profundo (lento)</option></select></div>
+      <div><label for="setMulti">Candidatas que se muestran</label><select id="setMulti"><option>3</option><option selected>5</option><option>8</option></select></div>
+      <div><label for="setRules">Reglas por defecto</label><select id="setRules"><option value="japanese">Japonesas</option><option value="chinese">Chinas</option></select></div>
+      <div><label for="setKo">Repetición de posiciones</label><select id="setKo"><option value="superko">Superko posicional (no se repite ninguna posición)</option><option value="simple">Sólo ko simple</option></select></div>
+    </div>
+    <div class="chk-row" style="margin-top:10px">
+      <label><input type="checkbox" id="setCoords" checked> Coordenadas</label>
+      <label><input type="checkbox" id="setLast" checked> Marcar la última jugada</label>
+      <label><input type="checkbox" id="setGhost" checked> Piedra fantasma al pasar el ratón</label>
+      <label><input type="checkbox" id="setAutosave" checked> Recordar la partida al recargar</label>
+      <label><input type="checkbox" id="setWheel" checked> Rueda del ratón para avanzar/retroceder</label>
+      <label><input type="checkbox" id="setVarHints" checked> Señalar las variantes en el tablero</label>
+    </div>
+    <p class="small">El motor interno es de Monte Carlo (sin red neuronal): juega con sentido y sirve para estudiar, sobre todo en 9×9 y 13×13, pero no tiene la fuerza de KataGo o Leela Zero. Para revisar una partida importante, descarga el SGF y ábrelo en esos programas.</p>
+  </div>
+</div>
+
+<!-- Ayuda -->
+<div class="modal-back" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="modal wide">
+    <h2 id="helpTitle"><span>❓ Guía de GoBase</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <div class="help-tools"><input id="helpSearch" placeholder="Buscar en la ayuda…" aria-label="Buscar en la ayuda"><button id="helpExpand" class="sm-btn">Abrir todo</button></div>
+    <div class="help-body" id="helpBody">
+{{HELP}}
+    </div>
+  </div>
+</div>
+
+<!-- Licencia -->
+<div class="modal-back" id="licModal" role="dialog" aria-modal="true" aria-labelledby="licTitle">
+  <div class="modal wide">
+    <h2 id="licTitle"><span>Licencia y créditos</span><button class="sm-btn" data-close>Cerrar</button></h2>
+    <p class="lic-p"><b>GoBase {{VERSION}}</b> · © 2026 Rafael Karino Arillo (<a href="https://github.com/rkarillo-tech" target="_blank" rel="noopener noreferrer">rkarillo-tech</a>). Licencia MIT.</p>
+    <p class="lic-p">Todo el código es propio: las reglas, el motor de Monte Carlo, los lectores de capturas y de vida y muerte, el lector y escritor SGF, la interfaz y la biblioteca. No usa bibliotecas externas y no se conecta a ningún servidor: tus partidas se quedan en tu navegador.</p>
+    <p class="lic-p">Hermana de <a href="https://github.com/rkarillo-tech/ajedrezbase" target="_blank" rel="noopener noreferrer">AjedrezBase</a> y <a href="https://github.com/rkarillo-tech/backgammonbase" target="_blank" rel="noopener noreferrer">BackgammonBase</a>.</p>
+    <div class="lic-text">{{MIT}}</div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status"></div>
+<div id="printView" class="print-view"></div>
+
+<script>
+"use strict";
+{{SCRIPTS}}
+</script>
+</body>
+</html>

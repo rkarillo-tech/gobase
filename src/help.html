@@ -1,0 +1,160 @@
+      <details id="help-inicio" open>
+        <summary>🧭 1. De un vistazo: cómo está organizada la pantalla</summary>
+        <ul>
+          <li><b>Columna izquierda</b>: el tablero con la <b>barra de victoria</b> a su izquierda (abajo negras, arriba blancas), los nombres de los jugadores con sus capturas y, si juegas con reloj, el tiempo; debajo, el <b>panel del motor</b>, el <b>gráfico de la partida</b>, los botones de navegación y la <b>lista de jugadas</b> con sus variantes.</li>
+          <li><b>Columna derecha</b>, arriba: la <b>partida actual</b> (título, ⭐ favorita, etiquetas, 💾 guardar y 📌 marcar). Debajo, cinco pestañas:
+            <b>📖 Estudio</b> (importar, comentar, analizar), <b>🧮 Recuento</b>, <b>🌍 Aperturas</b>, <b>📚 Biblioteca</b> (partidas, marcadores, búsqueda, estadísticas y ficheros .sgf) y <b>🎯 Entrenar</b> (problemas, tus errores y tarjetas).</li>
+          <li><b>Barra superior</b>: dibujo de las piedras, color del tablero, jugar contra la CPU, sonido 🔊, ajustes ⚙, esta ayuda ❓ y «Nueva» partida.</li>
+          <li><b>En el móvil</b>, en vertical: bajo el tablero están los botones para avanzar y retroceder y la lista de jugadas; más abajo, el motor y las pestañas (deslízalas a los lados). Las piedras, los colores y el sonido están en el botón <b>☰</b>. En horizontal, el tablero ocupa la izquierda y las jugadas la derecha.</li>
+        </ul>
+        <div class="example"><b>Ejemplo rápido (2 minutos):</b> pega un SGF en «📖 Estudio» → <b>Importar</b> → recórrelo con <kbd>←</kbd> <kbd>→</kbd> → pulsa <b>🤖 Analizar y comentar</b> → si te interesa, <b>💾 Guardar en biblioteca</b>.</div>
+      </details>
+
+      <details id="help-jugar">
+        <summary>⚫ 2. Poner piedras y recorrer la partida</summary>
+        <ul>
+          <li><b>Jugar</b>: pulsa un punto del tablero. Al pasar el ratón se ve una piedra fantasma del color que juega. <b>✋ Pasar</b> (o <kbd>P</kbd>) pasa el turno.</li>
+          <li>Se aplican todas las reglas: capturas, <b>ko</b> (no se puede recapturar enseguida), prohibición del <b>suicidio</b> y, si lo dejas en ⚙ Ajustes, <b>superko posicional</b> (ninguna posición puede repetirse). Si una jugada no vale, la línea de estado explica por qué.</li>
+          <li><b>Escribir la jugada</b>: en «⌨ Escribe una jugada», teclea <code>D4</code>, <code>Q16</code>, <code>pd</code> (coordenadas SGF) o <code>pasa</code> y pulsa <kbd>Intro</kbd>.</li>
+          <li><b>Navegar</b>: <b>|◀ ◀◀ ◀ ▶ ▶▶ ▶|</b>, el teclado (<kbd>←</kbd> <kbd>→</kbd>, <kbd>RePág</kbd> <kbd>AvPág</kbd> de 10 en 10, <kbd>Inicio</kbd> <kbd>Fin</kbd>) o la <b>rueda del ratón</b> sobre el tablero. También puedes pulsar cualquier jugada de la lista o cualquier punto del gráfico.</li>
+          <li><b>▶ Auto</b> (o <kbd>Espacio</kbd>) reproduce la partida sola. <b>Números</b> (<kbd>N</kbd>) escribe el número de jugada en cada piedra.</li>
+          <li>La última jugada lleva un círculo; un cuadrado vacío marca el punto de ko que no se puede retomar ahora.</li>
+          <li>Las coordenadas son las habituales: letras de la A a la T <b>sin la I</b> y números desde abajo (D4, Q16…).</li>
+        </ul>
+      </details>
+
+      <details id="help-variantes">
+        <summary>🌿 3. Variantes, comentarios y marcas</summary>
+        <ul>
+          <li>Si juegas en mitad de la partida se crea una <b>variante</b> (o se sobrescribe la línea, si lo eliges en «Al jugar en mitad de la partida»). Las variantes aparecen sangradas en la lista; en el tablero, un círculo azul señala los puntos donde hay otras ramas.</li>
+          <li><kbd>↑</kbd> <kbd>↓</kbd> cambian entre variantes hermanas. <b>⬆ Promover variante</b> la sube un puesto; <b>★ Hacer principal</b> la convierte en la línea principal; <b>✂ Cortar</b> borra la jugada actual y todo lo que la sigue.</li>
+          <li><b>Comentario</b>: escribe en «📖 Estudio › Comentario»; se guarda en la jugada que lleva a la posición. Los símbolos <code>!</code> <code>!!</code> <code>!?</code> <code>?!</code> <code>?</code> <code>??</code> y la valoración de la posición se exportan al SGF (TE, BM, IT, DO, GB, GW, DM, UC).</li>
+          <li><b>Marcas en el tablero</b>: elige △ □ ○ ✕, letras (A, B, C…) o números y pulsa puntos del tablero; 🧽 borra una marca. Mientras haya una marca elegida, el clic marca en lugar de jugar (púlsala otra vez o <kbd>Esc</kbd> para volver a jugar).</li>
+          <li><b>✏ Colocar piedras</b> monta posiciones libremente (por ejemplo, un problema): ⚫, ⚪ o 🧽 y clic en el tablero; clic derecho pone el otro color. Las piedras se colocan sin capturar (AB/AW/AE en SGF) y eliges quién juega después.</li>
+        </ul>
+      </details>
+
+      <details id="help-sgf">
+        <summary>📄 4. Importar y exportar (SGF)</summary>
+        <ul>
+          <li><b>Importar</b>: pega en «📖 Estudio» un SGF de OGS, KGS, Fox, Tygem, GoGoD, Sabaki, CGoban… y pulsa <b>Importar</b>. Se leen variantes, comentarios, marcas, colocaciones, hándicap, komi, reglas, rangos y resultado; las propiedades que GoBase no usa se conservan al exportar.</li>
+          <li>También entiende <b>jugadas sueltas</b>: <code>D4 Q16 C3 pasa</code> o <code>pd dp cc</code>. «Añadir desde aquí» las añade a partir de la posición actual.</li>
+          <li><b>📂 Abrir .sgf</b>: un fichero con una partida la abre; un fichero (o varios) con muchas partidas los abre en <b>📚 Biblioteca › 🗂 Fichero</b>, sólo en memoria. Respeta la codificación declarada (CA), por ejemplo GB2312 o Shift_JIS.</li>
+          <li><b>Exportar</b>: 📋 Copiar SGF, ⬇ Descargar .sgf o ⬇ Completa (.json, con el análisis). Con «Incluir el análisis», los comentarios del motor van dentro del SGF con el prefijo <code>[GoBase]</code>.</li>
+          <li><b>🖼 Imagen</b> descarga la posición en PNG (y la copia al portapapeles); <b>🖨 Imprimir</b> genera la partida en <b>figuras de 50 jugadas numeradas</b> con sus comentarios (también sirve para guardar en PDF); <b>🔗 Enlace</b> copia una dirección que abre la partida en esa jugada.</li>
+        </ul>
+      </details>
+
+      <details id="help-motor">
+        <summary>🤖 5. El motor y el análisis de la partida</summary>
+        <ul>
+          <li>GoBase trae su propio motor, <b>de Monte Carlo</b> (búsqueda en árbol con UCT y RAVE): juega miles de partidas simuladas desde la posición y cuenta cuántas gana cada bando. No necesita conexión ni descarga nada.</li>
+          <li><b>Analizar</b> (<kbd>E</kbd>) lo pone a pensar en la posición del tablero: muestra la <b>probabilidad de ganar</b>, la <b>ventaja estimada en puntos</b> (con el komi) y las mejores jugadas con su variante. Pulsa una línea para jugarla; <b>⚡ Jugar</b> juega la mejor.</li>
+          <li><b>Candidatas</b> pinta en el tablero las mejores jugadas con su porcentaje (azul la mejor). <b>Territorio</b> (<kbd>T</kbd>) pinta de quién es cada punto según el motor; las piedras con un cuadrado del otro color están, probablemente, muertas.</li>
+          <li><b>💡 Pista</b> (<kbd>H</kbd>) marca con un círculo la jugada que elige el motor.</li>
+          <li><b>🤖 Analizar y comentar</b> (📖 Estudio) evalúa cada posición de la línea principal (o de la variante, con 🌿), marca <span class="nag-inacc">?!</span> <span class="nag-mistake">?</span> <span class="nag-blunder">??</span> según cuánto baja la probabilidad de ganar (6, 12 y 24 %), redacta comentarios en español (capturas, ataris, conexiones, puntos de la esquina, la mejor alternativa y su línea) y dibuja el gráfico.</li>
+          <li>El <b>informe</b> resume la partida: coincidencia con el motor, pérdida media, errores por fases (apertura, medio juego, final), momentos clave y qué practicar. <b>🎯 Aprende de tus errores</b> te lleva a cada ? y ?? para que busques tú la jugada buena; se acepta cualquiera casi igual de buena que la del motor.</li>
+          <li><b>✍ Redactar comentario con el motor</b> comenta sólo la jugada actual.</li>
+        </ul>
+        <p class="warn-note">El motor no tiene red neuronal: en 9×9 y 13×13 juega con sentido y señala bien los errores claros, pero en 19×19 es mucho más débil que KataGo o Leela Zero. Tómalo como una orientación; para revisar una partida importante, descarga el SGF y ábrelo en esos programas.</p>
+      </details>
+
+      <details id="help-cpu">
+        <summary>🎮 6. Jugar contra la CPU</summary>
+        <ul>
+          <li><b>🤖 Jugar vs CPU</b>: elige tamaño (9×9 es donde mejor juega), tu color, <b>nivel 1 a 8</b>, <b>hándicap</b> de 2 a 9 piedras, komi, reglas y reloj.</li>
+          <li>El <b>reloj</b> usa tiempo principal y <b>byo-yomi</b> japonés: cuando se acaba el tiempo principal, tienes varios periodos (por ejemplo, 3 × 30 s); si juegas dentro del periodo, se repone; si lo agotas, pierdes uno. Sin periodos, pierdes por tiempo.</li>
+          <li>Durante la partida: <b>✋ Pasar</b>, <b>🏳 Rendirse</b>, <b>↶ Deshacer</b> (sólo sin reloj) y <b>🔁 Revancha</b>. La CPU pasa cuando la partida está acabada y se rinde si va claramente perdida.</li>
+          <li>Cuando los dos pasáis se abre el <b>recuento</b>: el motor propone las piedras muertas, puedes corregirlas pulsando los grupos y <b>✔ Aceptar el resultado</b>, que queda escrito en la partida (RE). Si no estás de acuerdo, <b>↩ Seguir jugando</b>.</li>
+          <li>La partida es como cualquier otra: puedes guardarla con 💾 y analizarla después.</li>
+        </ul>
+      </details>
+
+      <details id="help-recuento">
+        <summary>🧮 7. Recuento: territorio, prisioneros y komi</summary>
+        <ul>
+          <li><b>🧮 Contar ahora</b> cuenta la posición del tablero. El motor propone qué grupos están muertos (se ven transparentes); pulsa un grupo para cambiarlo de vivo a muerto.</li>
+          <li><b>Reglas japonesas</b>: territorio + prisioneros (capturas y piedras muertas). <b>Reglas chinas</b>: piedras vivas en el tablero + territorio. Las blancas suman el <b>komi</b>.</li>
+          <li>Los puntos neutrales (dame) no son de nadie; en seki, los ojos compartidos tampoco cuentan.</li>
+          <li><b>✔ Poner este resultado en la partida</b> escribe el resultado (B+3.5, W+0.5…) en los datos de la partida.</li>
+          <li><b>📈 Estimación en vivo</b>: con «Analizar» encendido, el motor da la ventaja en cualquier momento de la partida.</li>
+          <li><b>🎲 ¿Quién gana?</b> es un ejercicio para aprender a contar: la CPU juega una partida rápida de 9×9 y tú dices quién gana y por cuánto (se acepta un punto de margen).</li>
+        </ul>
+      </details>
+
+      <details id="help-aperturas">
+        <summary>🌍 8. Aperturas</summary>
+        <ul>
+          <li>El <b>explorador de tus partidas</b> muestra qué se jugó desde la posición del tablero en tu biblioteca y en el fichero abierto, y cómo acabaron esas partidas. Reconoce la misma posición aunque esté <b>girada o reflejada</b> (las 8 simetrías del tablero). Pulsa una fila para jugarla.</li>
+          <li><b>Puntos de la esquina</b>: hoshi (4-4), komoku (3-4), san-san (3-3), takamoku (4-5), mokuhazushi (3-5) y tengen, con su idea. Pulsa uno para verlo.</li>
+          <li><b>Formaciones</b> (nirensei, sanrensei) y <b>consejos</b> para la apertura.</li>
+        </ul>
+      </details>
+
+      <details id="help-biblioteca">
+        <summary>📚 9. Biblioteca, marcadores y estadísticas</summary>
+        <ul>
+          <li><b>Nada se guarda solo</b>: importar o abrir un fichero no guarda nada. Pulsa <b>💾 Guardar en biblioteca</b> en las partidas que te interesen; a partir de ahí sus cambios se guardan solos.</li>
+          <li>En <b>📚 Partidas</b>: buscador, ⭐ favoritas, etiquetas, orden, borrado individual o de varias, <b>⬇ Exportar .sgf</b> y <b>copias de seguridad</b> (⬇ y ⬆) con partidas y marcadores.</li>
+          <li><b>📌 Marcar</b> (<kbd>M</kbd>) guarda la posición con una categoría (idea, táctica, vida y muerte, forma, error típico, plan, yose…) y una nota. En <b>📌 Marcadores</b> las ves con un minitablero y vuelves a ellas con un clic.</li>
+          <li><b>🔎 Buscar</b> encuentra un texto en los comentarios de todas tus partidas y en las notas de los marcadores.</li>
+          <li><b>📊 Estadísticas</b>: con tu nombre tal como sale en las partidas, verás victorias por color y tamaño de tablero, coincidencia con el motor, errores por partida y en qué fase pierdes más.</li>
+          <li><b>🗂 Fichero</b>: las colecciones .sgf se abren sólo en memoria; filtra y guarda las que quieras.</li>
+          <li>El medidor de <b>💾 Ocupación</b> dice cuánto ocupa todo; <b>🔒 Proteger datos</b> pide al navegador que no lo borre si le falta espacio.</li>
+        </ul>
+      </details>
+
+      <details id="help-entrenar">
+        <summary>🎯 10. Entrenar</summary>
+        <ul>
+          <li><b>🧩 Problemas</b> de vida y muerte (formas de ojos: tres en línea, en ángulo, cuatro en T, cinco abultado, cinco en cruz, conejo de seis) y de capturas (escalera, red, contragolpe). Juegas con negras dentro de la zona azul; la CPU defiende o ataca con <b>lectura exacta</b>, así que <b>cualquier jugada que funcione vale</b>, aunque no sea la del libro. Al acabar verás por qué funciona.</li>
+          <li><b>📂 Abrir problemas .sgf</b>: colecciones de problemas en SGF. La solución es la rama marcada con <code>RIGHT</code>, <code>Correcto</code> o <code>!</code>, o la línea principal si el fichero no marca nada.</li>
+          <li><b>❌ Errores de tus partidas</b>: los ? y ?? de todas tus partidas analizadas, al azar. Busca la jugada buena; el motor acepta cualquiera casi igual de buena.</li>
+          <li><b>🧠 Tarjetas</b>: cada marcador con «entrenar» es una tarjeta. Las que aciertas vuelven en 1, 3, 7, 16, 35 y 75 días; las que fallas, al rato.</li>
+        </ul>
+        <div class="steps"><b>Plan de una semana:</b> cada día 5 problemas, repasa las tarjetas pendientes y analiza una partida tuya. El fin de semana, «Errores de tus partidas».</div>
+      </details>
+
+      <details id="help-instalar">
+        <summary>📲 11. Instalar y usar sin conexión</summary>
+        <ul>
+          <li>La versión web se puede <b>instalar como aplicación</b> (botón «⬇ Instalar», o «Añadir a pantalla de inicio» en el móvil) y entonces funciona <b>sin conexión</b>.</li>
+          <li>También puedes descargar el archivo <code>gobase.html</code> y abrirlo con doble clic: es la aplicación completa en un solo fichero.</li>
+          <li>La biblioteca vive en tu navegador y depende de la dirección: la de la versión web no es la misma que la del archivo descargado. Para pasarla de un sitio a otro, usa <b>⬇ Copia de seguridad</b> y <b>⬆ Restaurar copia</b>.</li>
+        </ul>
+      </details>
+
+      <details id="help-teclas">
+        <summary>⌨ 12. Atajos de teclado</summary>
+        <table class="kbd-table">
+          <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Jugada anterior / siguiente</td></tr>
+          <tr><td><kbd>RePág</kbd> <kbd>AvPág</kbd></td><td>10 jugadas atrás / adelante</td></tr>
+          <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Cambiar entre variantes</td></tr>
+          <tr><td><kbd>Inicio</kbd> <kbd>Fin</kbd></td><td>Principio / final de la línea</td></tr>
+          <tr><td><kbd>Espacio</kbd></td><td>Reproducción automática</td></tr>
+          <tr><td><kbd>P</kbd></td><td>Pasar</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Activar / pausar el análisis continuo</td></tr>
+          <tr><td><kbd>T</kbd></td><td>Mostrar u ocultar el territorio estimado</td></tr>
+          <tr><td><kbd>H</kbd></td><td>Pista: la mejor jugada</td></tr>
+          <tr><td><kbd>N</kbd></td><td>Números en las piedras</td></tr>
+          <tr><td><kbd>M</kbd></td><td>Marcar la posición</td></tr>
+          <tr><td><kbd>?</kbd></td><td>Esta ayuda</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Cerrar ventanas y dejar de marcar</td></tr>
+        </table>
+      </details>
+
+      <details id="help-faq">
+        <summary>❔ 13. Preguntas frecuentes</summary>
+        <dl class="faq">
+          <dt>¿Dónde se guardan mis partidas?</dt>
+          <dd>Sólo en tu navegador (IndexedDB). Nada se sube a ningún servidor; GoBase no se conecta a internet.</dd>
+          <dt>¿Qué reglas usa?</dt>
+          <dd>Las del go: capturas, ko y suicidio prohibido. Para la repetición de posiciones puedes elegir superko posicional (por defecto) o sólo ko simple. El recuento puede ser japonés (territorio) o chino (área).</dd>
+          <dt>¿Por qué el motor a veces no ve una jugada evidente?</dt>
+          <dd>Es un motor de Monte Carlo sin red neuronal: es bueno en luchas locales y en tableros pequeños, pero en 19×19 necesita muchas simulaciones y puede despistarse. Déjalo pensar más (análisis continuo) o usa «Profundo» en ⚙ Ajustes.</dd>
+          <dt>¿Cómo sé que los problemas están bien?</dt>
+          <dd>Cada problema lo resuelve un lector exacto: el de vida y muerte prueba todas las jugadas de la zona, y el de capturas lee escaleras, redes y contragolpes. Las pruebas automáticas del proyecto comprueban la solución de cada uno.</dd>
+          <dt>¿Puedo usarlo, modificarlo o compartirlo?</dt>
+          <dd>Sí, con licencia MIT. El código está en <a href="https://github.com/rkarillo-tech/gobase" target="_blank" rel="noopener noreferrer">github.com/rkarillo-tech/gobase</a>.</dd>
+        </dl>
+      </details>
